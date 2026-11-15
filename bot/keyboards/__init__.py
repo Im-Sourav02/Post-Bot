@@ -1,3 +1,4 @@
+from pyrogram.enums import ButtonStyle
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from bot import config
@@ -18,6 +19,16 @@ def btn(text: str, *parts) -> InlineKeyboardButton:
 
 def url_btn(text: str, link: str) -> InlineKeyboardButton:
     return InlineKeyboardButton(text, url=link)
+
+
+def url_btn_primary(text: str, link: str) -> InlineKeyboardButton:
+    """Blue URL button (Kurigram ButtonStyle.PRIMARY)."""
+    return InlineKeyboardButton(text, url=link, style=ButtonStyle.PRIMARY)
+
+
+def url_btn_danger(text: str, link: str) -> InlineKeyboardButton:
+    """Red URL button (Kurigram ButtonStyle.DANGER)."""
+    return InlineKeyboardButton(text, url=link, style=ButtonStyle.DANGER)
 
 
 def markup(rows) -> InlineKeyboardMarkup:

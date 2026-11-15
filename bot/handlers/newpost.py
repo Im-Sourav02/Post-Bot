@@ -98,6 +98,14 @@ async def _accept_caption(client, uid, post, caption_html: str, previous: int | 
     await _ask_link(client, uid, post, previous=previous)
 
 
+async def _delete_silently(msg: Message) -> None:
+    """Delete a user message without raising if it fails (e.g. race, permissions)."""
+    try:
+        await msg.delete()
+    except Exception:
+        pass
+
+
 async def _accept_media(client, msg: Message, data: dict) -> None:
     uid = msg.from_user.id
     try:
@@ -115,6 +123,7 @@ async def _accept_media(client, msg: Message, data: dict) -> None:
             await msg.reply("📢 This channel was removed from the bot.")
             return
         post = await posts.create(chat, uid, media_type=media_type, file_id=file_id)
+    await _delete_silently(msg)
     if msg.caption:
         await _accept_caption(client, uid, post, message_html(msg), data.get("msg"))
     else:
@@ -166,6 +175,7 @@ async def link_step(client: Client, msg: Message, state: dict) -> None:
     if not url:
         await _ask_link(client, uid, post, BAD_LINK, previous=data.get("msg"))
         return
+    await _delete_silently(msg)
     post = await posts.update(post["token"], download_url=url)
     await _show_preview(client, uid, post, previous=data.get("msg"))
 

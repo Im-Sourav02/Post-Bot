@@ -1,22 +1,22 @@
 from pyrogram.types import InlineKeyboardMarkup
 
-from bot.keyboards import btn, markup, nav, url_btn
+from bot.keyboards import btn, markup, nav, url_btn, url_btn_danger, url_btn_primary
 from bot.services.links import message_link, share_link, telegram_share_url
 from bot.services.media import LABELS
 
 
 def link_rows(channel: dict, download_url: str | None) -> list[list]:
-    """Row 1: Premium + Backup (from channel settings, skipped when unset). Row 2: Download."""
+    """Row 1: Premium + Backup (blue, from channel settings). Row 2: Watch Now (red)."""
     rows = []
     top = []
     if channel.get("premium_url"):
-        top.append(url_btn("Pʀᴇᴍɪᴜᴍ", channel["premium_url"]))
+        top.append(url_btn_primary("𝗣𝗥𝗘𝗠𝗜𝗨𝗠", channel["premium_url"]))
     if channel.get("backup_url"):
-        top.append(url_btn("Bᴀᴄᴋ-ᴜᴘ", channel["backup_url"]))
+        top.append(url_btn_primary("𝗕𝗔𝗖𝗞-𝗨𝗣", channel["backup_url"]))
     if top:
         rows.append(top)
     if download_url:
-        rows.append([url_btn("Wᴀᴛᴄʜ Nᴏᴡ", download_url)])
+        rows.append([url_btn_danger("𝗪𝗔𝗧𝗖𝗛 𝗡𝗢𝗪", download_url)])
     return rows
 
 
