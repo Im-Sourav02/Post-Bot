@@ -27,6 +27,10 @@ def is_not_modified(e: BaseException) -> bool:
     return error_id(e) == "MESSAGE_NOT_MODIFIED"
 
 
+def is_file_ref_expired(e: BaseException) -> bool:
+    return error_id(e) in ("FILE_REFERENCE_EXPIRED", "FILE_REFERENCE_EMPTY")
+
+
 def friendly(e: BaseException) -> str:
     if isinstance(e, FloodWait):
         return f"⏳ Telegram is rate-limiting the bot. Please try again in {e.value} seconds."

@@ -44,12 +44,17 @@ def edit_panel(post: dict, channel: dict | None) -> InlineKeyboardMarkup:
     label = LABELS.get(post.get("media_type"), "Media")
     link = message_link(channel, post.get("message_id")) if post.get("status") == "sent" else None
     share = url_btn("🔁 Share", telegram_share_url(link)) if link else btn("🔁 Share", "al", "ns")
-    return markup([
+    rows = [
         [btn(f"🖼 {label}", "em", t), btn("👀 See", "sv", t, "m")],
         [btn("🔤 Caption", "ec", t), btn("👀 See", "sv", t, "c")],
         [btn("⌨️ Buttons", "eb", t), btn("👀 See", "sv", t, "b")],
         [btn("🗑 Schedule deletion", "sd", t)],
+    ]
+    if post.get("status") == "scheduled":
+        rows.append([btn("📤 Send Now", "sn", t)])
+    rows += [
         [btn("🔀 Resend post", "rs", "re", t, 0)],
         [share],
         nav(f"ml:{post['channel_id']}:a:0"),
-    ])
+    ]
+    return markup(rows)

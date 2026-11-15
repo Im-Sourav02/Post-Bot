@@ -8,6 +8,7 @@ from bot.db import channels, posts, states
 from bot.handlers.router import callback, step
 from bot.keyboards import NUMBERS, btn, channel_grid, markup, nav, only_nav
 from bot.keyboards import posts as post_kb
+from bot.keyboards.posts import actions
 from bot.services import media, poster, screens, ui
 from bot.services.errors import friendly
 from bot.services.formatting import caption_overflow, esc, message_html, normalize_url, snippet, too_long_text
@@ -159,6 +160,20 @@ async def edit_cb(client: Client, cq: CallbackQuery, args: list[str]):
     if not post:
         return "❌ This post no longer exists.", True
     await show_panel(client, cq.from_user.id, post, cq_msg=cq.message)
+
+
+@callback("sn")
+async def send_now_cb(client: Client, cq: CallbackQuery, args: list[str]):
+    """Send a scheduled post immediately. Uses claim() to atomically prevent the scheduler from also sending it."""
+    token = args[0]
+    post, error = await poster.send_now(client, token, from_status=posts.SCHEDULED)
+    if error:
+        return error, True
+    channel = await channels.get(post["channel_id"])
+    bot = client.me.username
+    await ui.show(client, cq.message.chat.id, screens.post_sent(post, channel, bot), actions(post, bot),
+                  cq_msg=cq.message)
+    return "✅ Post sent!"
 
 
 @callback("sv")

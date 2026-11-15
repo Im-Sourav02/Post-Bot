@@ -89,15 +89,18 @@ async def _live(post: dict, action) -> str | None:
 
 
 async def live_caption(client: Client, post: dict, channel: dict) -> str | None:
+    caption = full_caption(post, channel)
+    rm = post_markup(channel, post.get("download_url"))
     return await _live(post, lambda: client.edit_message_caption(
-        channel["tg_chat_id"], post["message_id"], full_caption(post, channel),
-        reply_markup=post_markup(channel, post.get("download_url")),
+        channel["tg_chat_id"], post["message_id"],
+        caption=caption, reply_markup=rm,
     ))
 
 
 async def live_buttons(client: Client, post: dict, channel: dict) -> str | None:
     return await _live(post, lambda: client.edit_message_reply_markup(
-        channel["tg_chat_id"], post["message_id"], post_markup(channel, post.get("download_url")),
+        channel["tg_chat_id"], post["message_id"],
+        reply_markup=post_markup(channel, post.get("download_url")),
     ))
 
 
@@ -106,10 +109,46 @@ async def live_media(client: Client, post: dict, channel: dict, media_type: str,
     if new_media is None or post.get("media_type") == "voice":
         return ("🎙 Telegram can't swap voice messages in an existing post. "
                 "Delete the post and send a new one instead.")
-    return await _live(post, lambda: client.edit_message_media(
-        channel["tg_chat_id"], post["message_id"], new_media,
-        reply_markup=post_markup(channel, post.get("download_url")),
-    ))
+
+    async def _edit():
+        await client.edit_message_media(
+            channel["tg_chat_id"], post["message_id"], new_media,
+            reply_markup=post_markup(channel, post.get("download_url")),
+        )
+
+    result = await _live(post, _edit)
+    if result is not None and is_file_ref_expired_text(result):
+        # The new file_id from the user's message should be fresh, but edit_message_media
+        # may still hit FILE_REFERENCE_EXPIRED on the server side.  Rebuild InputMedia
+        # and retry once — Kurigram refreshes file references between calls.
+        log.info("Retrying live_media for post %s after file-reference error", post["token"])
+        refreshed = media.input_media(media_type, file_id, full_caption(post, channel))
+        result = await _live(post, lambda: client.edit_message_media(
+            channel["tg_chat_id"], post["message_id"], refreshed,
+            reply_markup=post_markup(channel, post.get("download_url")),
+        ))
+    return result
+
+
+def is_file_ref_expired_text(error_text: str) -> bool:
+    """Check if an error message indicates a file reference issue."""
+    return "FILE_REFERENCE" in error_text.upper() if error_text else False
+
+
+async def refresh_file_id(client: Client, post: dict) -> str | None:
+    """Fetch the channel message to obtain a fresh file_id, updating the DB. Returns the new file_id or None."""
+    try:
+        msgs = await client.get_messages(post["channel_id"], post["message_id"])
+        msg = msgs if not isinstance(msgs, list) else (msgs[0] if msgs else None)
+        if msg is None or msg.empty:
+            return None
+        _, fresh_id = media.extract_from_message(msg)
+        if fresh_id and fresh_id != post.get("file_id"):
+            await posts.update(post["token"], file_id=fresh_id)
+        return fresh_id
+    except Exception as e:
+        log.debug("Could not refresh file_id for post %s: %s", post["token"], e)
+        return None
 
 
 async def delete_live(client: Client, post: dict) -> None:

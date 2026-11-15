@@ -67,6 +67,15 @@ def extract(msg: Message) -> tuple[str, str]:
     raise UnsupportedMedia(OTHER_TEXT)
 
 
+def extract_from_message(msg: Message) -> tuple[str | None, str | None]:
+    """Like extract() but returns (None, None) instead of raising when unsupported."""
+    for kind in SUPPORTED:
+        obj = getattr(msg, kind, None)
+        if obj is not None:
+            return kind, obj.file_id
+    return None, None
+
+
 async def send(
     client: Client,
     chat_id: int,
